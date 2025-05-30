@@ -224,12 +224,15 @@ function extractInitialPageInfo() {
 
     const specificChannelTitleElement = document.querySelector('yt-formatted-string#text.ytd-channel-name, yt-formatted-string.ytd-channel-name.ytd-c4-tabbed-header-renderer, #channel-header yt-formatted-string#text.ytd-channel-name, #name yt-formatted-string#text');
     console.log('[CS_ExtractInfo_ChannelPage] specificChannelTitleElement found:', specificChannelTitleElement);
+    // Replace the existing title logic block with this:
     if (specificChannelTitleElement && specificChannelTitleElement.textContent) {
-        result.extractedChannelTitle = specificChannelTitleElement.textContent.trim();
+        result.pageTitle = specificChannelTitleElement.textContent.trim();
+        result.extractedChannelTitle = result.pageTitle; // Keep this consistent
     } else {
-        result.extractedChannelTitle = document.title.replace(/ - YouTube$/, '').trim();
+        result.pageTitle = document.title.replace(/ - YouTube$/, '').trim(); // Fallback to cleaned document.title
+        result.extractedChannelTitle = result.pageTitle; // Keep this consistent
     }
-    console.log('[CS_ExtractInfo_ChannelPage] result.extractedChannelTitle set to:', result.extractedChannelTitle);
+    console.log('[CS_ExtractInfo_ChannelPage] result.pageTitle (for channel) set to:', result.pageTitle);
     
     // Set relevant debug fields for channel page context
     result.debug_cs_channelLinkElementFound = true; // Since URL is window.location.href
@@ -238,18 +241,52 @@ function extractInitialPageInfo() {
     result.debug_cs_channelNameContent = result.extractedChannelTitle; // Best guess given the logic
     result.debug_cs_usedFallbackChannelTitle = !specificChannelTitleElement;
 
+    // Replace the 'channelIcon' and 'channelBanner' blocks with this:
+    const channelAvatarSelectors = [
+        '#avatar.ytd-c4-tabbed-header-renderer img',
+        'yt-img-shadow#avatar img',
+        '#channel-header #avatar img',
+        'img.channel-header-profile-image-container'
+    ];
+    let channelIcon = null;
+    for (const selector of channelAvatarSelectors) {
+        channelIcon = document.querySelector(selector);
+        if (channelIcon) {
+            console.log('[CS_ExtractInfo_ChannelPage] Channel avatar found with selector:', selector);
+            break;
+        }
+    }
 
-    const channelIcon = document.querySelector('#avatar img.yt-img-shadow, yt-img-shadow#avatar img.yt-img-shadow, #channel-header #avatar img');
     if (channelIcon && channelIcon.src) {
       result.faviconUrl = channelIcon.src; 
       result.thumbnailUrl = channelIcon.src; 
       result.debug_cs_channelImgFound = true;
       result.debug_cs_channelImgSrc = channelIcon.src;
       
-      const channelBanner = document.querySelector('#contentContainer #header #banner img, tp-yt-profile-header-renderer #banner img');
-      if(channelBanner && channelBanner.src && channelBanner.src.startsWith('http')){
-        result.thumbnailUrl = channelBanner.src; // Override thumbnail if banner found
+      const channelBannerSelectors = [
+        '#banner.ytd-c4-tabbed-header-renderer img',
+        'tp-yt-profile-header-renderer #banner img',
+        '#header #banner img',
+        'img.style-scope.ytd-channel-banner'
+      ];
+      let channelBanner = null;
+      for (const selector of channelBannerSelectors) {
+          channelBanner = document.querySelector(selector);
+          if (channelBanner) {
+              console.log('[CS_ExtractInfo_ChannelPage] Channel banner found with selector:', selector);
+              break;
+          }
       }
+
+      if(channelBanner && channelBanner.src && channelBanner.src.startsWith('http')){
+        result.thumbnailUrl = channelBanner.src;
+        console.log('[CS_ExtractInfo_ChannelPage] Channel banner successfully updated thumbnailUrl.');
+      } else {
+        console.log('[CS_ExtractInfo_ChannelPage] Channel banner not found or src invalid, thumbnailUrl remains avatar.');
+      }
+    } else {
+        console.log('[CS_ExtractInfo_ChannelPage] Channel avatar not found.');
+        result.debug_cs_channelImgFound = false; // Ensure this is set if no icon found
     }
   }
 
