@@ -3,16 +3,24 @@ document.addEventListener('DOMContentLoaded', function() {
   // const youtubeList = document.getElementById('youtubeList'); // Remove this
   const youtubeVideosList = document.getElementById('youtubeVideosList');
   const youtubeChannelsList = document.getElementById('youtubeChannelsList');
-  const selectionsList = document.getElementById('selectionsList');
-  const dragDropToggle = document.getElementById('dragDropToggle'); // Added
-  let dragDropEnabled = false; // Added
-  let draggedItem = null; // Added
-  let originalBookmarksOrder = []; // Added
+  // const selectionsList = document.getElementById('selectionsList'); // Removed
+  const webpagesList = document.getElementById('webpagesList'); // New list for 'page' type
+  const recycleBinList = document.getElementById('recycleBinList');
+  const dragDropToggle = document.getElementById('dragDropToggle');
+  let dragDropEnabled = false;
+  let draggedItem = null;
+  let originalBookmarksOrder = [];
+
+  const sidebarNav = document.getElementById('sidebarNav');
+  const allSectionContents = document.querySelectorAll('.section-title[data-section-content], .bookmark-list[data-section-content]');
+
+  let markedForDeletionId = null; // Added global variable
 
   // Function to update draggable attributes and visual cues (Added)
   function updateDraggableState(enabled) {
-    const lists = [websitesList, youtubeVideosList, youtubeChannelsList, selectionsList]; // Updated lists
+    const lists = [websitesList, youtubeVideosList, youtubeChannelsList, webpagesList, recycleBinList];
     lists.forEach(list => {
+      if (!list) return; // In case a list element isn't found
       if (enabled) {
         list.classList.add('dnd-enabled');
       } else {
@@ -169,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Function to create a bookmark list item element
-  function createBookmarkElement(bookmark) {
+  function createBookmarkElement(bookmark, currentSectionId) { // Added currentSectionId
     const item = document.createElement('li');
     item.classList.add('bookmark-item');
     item.setAttribute('data-id', bookmark.id);
@@ -198,70 +206,145 @@ document.addEventListener('DOMContentLoaded', function() {
         <span class="bookmark-title">${escapeHTML(bookmark.title)}</span>
         <a href="${escapeHTML(bookmark.url)}" target="_blank" class="bookmark-url" title="${escapeHTML(bookmark.url)}">${escapeHTML(bookmark.url.length > 60 ? bookmark.url.substring(0,57) + '...' : bookmark.url)}</a>`;
 
-    if (bookmark.type === 'selection' && bookmark.text) {
-        textContent += `<p class="bookmark-selection-text"><em>"${escapeHTML(bookmark.text)}"</em></p>`;
-    }
+    // Removed selection-specific text block
     
+    let dateStringToDisplay = `Added: ${new Date(bookmark.added_date).toLocaleString()}`;
+    if (currentSectionId === 'recycle_bin' && bookmark.deleted_timestamp) {
+        const deletionDate = new Date(bookmark.deleted_timestamp);
+        deletionDate.setDate(deletionDate.getDate() + 7); // Add 7 days
+        dateStringToDisplay = `Scheduled for permanent deletion: ${deletionDate.toLocaleDateString()}`;
+    } else if (currentSectionId === 'recycle_bin') {
+        dateStringToDisplay = 'Marked for deletion (date unavailable)';
+    }
+
     textContent += `
-        <small class="bookmark-date">Added: ${new Date(bookmark.added_date).toLocaleString()}</small>
+        <small class="bookmark-date">${dateStringToDisplay}</small>
       </div>
     `;
+
+    let actionButtonHTML = `<button class="deleteBtn" data-id="${bookmark.id}" title="Delete bookmark">Delete</button>`;
+    if (currentSectionId === 'recycle_bin') {
+        actionButtonHTML = `<button class="restoreBtn" data-id="${bookmark.id}" title="Restore bookmark">Restore</button>`;
+        // Optionally, add a permanent delete button here:
+        // actionButtonHTML += `<button class="permDeleteBtn" data-id="${bookmark.id}" title="Delete Permanently">Delete Permanently</button>`;
+    }
 
     item.innerHTML = `
       ${imageAreaContent}
       ${textContent}
       <div class="bookmark-actions">
-        <button class="deleteBtn" data-id="${bookmark.id}" title="Delete bookmark">Delete</button>
+        ${actionButtonHTML}
       </div>
     `;
     return item;
   }
 
-  // Function to render bookmarks to their respective lists
-  function renderBookmarks(bookmarks) {
-    // Clear existing placeholder or old bookmarks
-    websitesList.innerHTML = '';
-    youtubeVideosList.innerHTML = ''; // New list
-    youtubeChannelsList.innerHTML = ''; // New list
-    selectionsList.innerHTML = '';
+// Function to render bookmarks for a specific section
+function renderBookmarksForSection(sectionId, allBookmarks) {
+  let targetList;
+  let filteredBookmarks;
 
-    if (bookmarks.length === 0) {
-        websitesList.innerHTML = '<li class="empty-list-placeholder">No website bookmarks yet.</li>';
-        youtubeVideosList.innerHTML = '<li class="empty-list-placeholder">No YouTube video bookmarks yet.</li>'; // New list
-        youtubeChannelsList.innerHTML = '<li class="empty-list-placeholder">No YouTube channel bookmarks yet.</li>'; // New list
-        selectionsList.innerHTML = '<li class="empty-list-placeholder">No selections bookmarked yet.</li>';
-        // Still call addListEventListeners to ensure D&D listeners are on the empty lists
-        // if one list becomes empty after a delete.
-        // updateDraggableState and addListEventListeners are called after this block regardless
-    }
-
-    bookmarks.forEach(bookmark => {
-      const bookmarkElement = createBookmarkElement(bookmark);
-      if (bookmark.type === 'youtube_video') {
-        youtubeVideosList.appendChild(bookmarkElement); // Changed
-      } else if (bookmark.type === 'youtube_channel') {
-        youtubeChannelsList.appendChild(bookmarkElement); // Changed
-      } else if (bookmark.type === 'selection') {
-        selectionsList.appendChild(bookmarkElement);
-      } else { // 'page' and 'website' types
-        websitesList.appendChild(bookmarkElement);
-      }
-    });
-    
-    updateDraggableState(dragDropEnabled); 
-    addListEventListeners(); 
+  switch (sectionId) {
+    case 'youtube_videos':
+      targetList = youtubeVideosList;
+      filteredBookmarks = allBookmarks.filter(bm => bm.type === 'youtube_video' && bm.status !== 'deleted');
+      break;
+    case 'youtube_channels':
+      targetList = youtubeChannelsList;
+      filteredBookmarks = allBookmarks.filter(bm => bm.type === 'youtube_channel' && bm.status !== 'deleted');
+      break;
+    case 'websites':
+      targetList = websitesList;
+      filteredBookmarks = allBookmarks.filter(bm => bm.type === 'website' && bm.status !== 'deleted');
+      break;
+    case 'webpages': // New case for 'page' type
+      targetList = webpagesList;
+      filteredBookmarks = allBookmarks.filter(bm => bm.type === 'page' && bm.status !== 'deleted');
+      break;
+    case 'recycle_bin':
+      targetList = recycleBinList;
+      filteredBookmarks = allBookmarks.filter(bm => bm.status === 'deleted');
+      // Special rendering for recycle bin items might be needed later (e.g., show deletion date, restore button)
+      break;
+    default:
+      console.warn("Unknown section in renderBookmarksForSection:", sectionId);
+      return;
   }
 
-  // Load bookmarks from storage and render them
-  function loadAndRenderBookmarks() {
+  if (!targetList) {
+    console.error("Target list not found for section:", sectionId);
+    return;
+  }
+
+  targetList.innerHTML = ''; // Clear current contents
+  if (filteredBookmarks.length === 0) {
+    targetList.innerHTML = `<li class="empty-list-placeholder">No bookmarks in this section.</li>`;
+  } else {
+    filteredBookmarks.forEach(bookmark => {
+      const bookmarkElement = createBookmarkElement(bookmark, sectionId); // Pass sectionId
+      targetList.appendChild(bookmarkElement);
+    });
+  }
+  // Ensure D&D listeners are updated for the newly rendered list
+  updateDraggableState(dragDropEnabled);
+  addListEventListenersForList(targetList);
+}
+
+
+function showSection(sectionId) {
+  console.log("Switching to section:", sectionId);
+  // Update active link in sidebar
+  sidebarNav.querySelectorAll('.sidebar-link').forEach(link => {
+    link.classList.remove('active-section');
+    if (link.dataset.section === sectionId) {
+      link.classList.add('active-section');
+    }
+  });
+
+  // Hide all content sections (both h2 and ul)
+  allSectionContents.forEach(contentEl => {
+    contentEl.classList.remove('active');
+    contentEl.style.display = 'none'; // Ensure it's hidden
+  });
+
+  // Show the target section (h2 and ul)
+  // Note: The querySelector uses `sectionId` directly for the data-section-content attribute.
+  const activeTitle = document.querySelector(`.section-title[data-section-content="${sectionId}"]`);
+  // The list ID is assumed to be sectionId + "List", e.g., "youtube_videosList", "recycle_binList"
+  const activeList = document.getElementById(sectionId + 'List');
+
+
+  if (activeTitle) {
+    activeTitle.classList.add('active');
+    activeTitle.style.display = 'block';
+  } else if (sectionId === "recycle_bin") {
+     const recycleBinTitleFromDOM = document.querySelector('h2[data-section-content="recycle_bin"]');
+     if(recycleBinTitleFromDOM) {
+        recycleBinTitleFromDOM.classList.add('active');
+        recycleBinTitleFromDOM.style.display = 'block';
+     } else {
+        console.warn("Recycle Bin title H2 element not found with data-section-content='recycle_bin'");
+     }
+  }
+
+
+  if (activeList) {
+    activeList.classList.add('active');
+    activeList.style.display = 'grid'; // Assuming 'grid' is the default display for bookmark lists
     chrome.storage.local.get({ bookmarks: [] }, function(data) {
-      // D&D relies on the order from storage. If we sort here for display only,
-      // the D&D logic might get confused. For D&D, it's best to render
-      // in the order they are stored, or ensure D&D updates the sorted source.
-      // For now, removing the sort for D&D to work correctly with array indices.
-      // Sorting will be handled by how items are added/moved.
-      // renderBookmarks(data.bookmarks.sort((a,b) => new Date(b.added_date) - new Date(a.added_date)));
-      renderBookmarks(data.bookmarks); 
+      renderBookmarksForSection(sectionId, data.bookmarks);
+    });
+  } else {
+     console.warn("Could not find list for sectionId:", sectionId + "List");
+  }
+}
+
+  // Load bookmarks from storage and render them
+  function loadAndRenderBookmarks() { // Renamed to reflect it's now initial load
+    chrome.storage.local.get({ bookmarks: [] }, function(data) {
+      const currentActiveLink = sidebarNav.querySelector('.sidebar-link.active-section');
+      const defaultSection = currentActiveLink ? currentActiveLink.dataset.section : 'youtube_videos';
+      showSection(defaultSection);
     });
   }
   
@@ -272,36 +355,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+function performSoftDelete(bookmarkId) {
+  console.log('Performing soft delete for bookmarkId:', bookmarkId);
+  chrome.storage.local.get({ bookmarks: [] }, function(data) {
+    let bookmarks = data.bookmarks;
+    const bookmarkIndex = bookmarks.findIndex(bm => bm.id === bookmarkId);
+
+    if (bookmarkIndex !== -1) {
+      bookmarks[bookmarkIndex].status = 'deleted';
+      bookmarks[bookmarkIndex].deleted_timestamp = new Date().toISOString();
+
+      chrome.storage.local.set({ bookmarks: bookmarks }, function() {
+        if (chrome.runtime.lastError) {
+          console.error("Error soft deleting bookmark:", chrome.runtime.lastError);
+        } else {
+          console.log("Bookmark soft deleted:", bookmarkId);
+        }
+      });
+    } else {
+      console.warn("Could not find bookmark to soft delete with ID:", bookmarkId);
+    }
+  });
+}
+
   function handleDeleteBookmark(event) {
-    if (event.target.classList.contains('deleteBtn')) {
-      const bookmarkId = event.target.getAttribute('data-id');
-      if (confirm('Are you sure you want to delete this bookmark?')) {
-        chrome.storage.local.get({ bookmarks: [] }, function(data) {
-          let bookmarks = data.bookmarks.filter(bm => bm.id !== bookmarkId);
-          chrome.storage.local.set({ bookmarks: bookmarks }, function() {
-            if (chrome.runtime.lastError) {
-              console.error("Error deleting bookmark:", chrome.runtime.lastError);
-            } else {
-              console.log("Bookmark deleted:", bookmarkId);
-              // loadAndRenderBookmarks(); // Re-render will be handled by storage.onChanged
-            }
-          });
-        });
+    const clickedDeleteButton = event.target.closest('.deleteBtn'); // Ensure we handle clicks on icons inside button too
+    if (clickedDeleteButton) {
+      const bookmarkId = clickedDeleteButton.getAttribute('data-id');
+      const bookmarkItemElement = clickedDeleteButton.closest('.bookmark-item');
+
+      if (!bookmarkItemElement) return;
+
+      if (markedForDeletionId === bookmarkId) {
+        // This is the second click on the same marked item's delete button
+        performSoftDelete(bookmarkId);
+        bookmarkItemElement.classList.remove('marked-for-deletion');
+        markedForDeletionId = null;
+        console.log('Confirmed (soft) delete for:', bookmarkId);
+      } else {
+        // This is a first click, or a click on a different item's delete button
+        // Unmark any previously marked item
+        if (markedForDeletionId) {
+          const previouslyMarkedElement = document.querySelector(`.bookmark-item[data-id="${markedForDeletionId}"]`);
+          if (previouslyMarkedElement) {
+            previouslyMarkedElement.classList.remove('marked-for-deletion');
+          }
+        }
+        // Mark the new item
+        bookmarkItemElement.classList.add('marked-for-deletion');
+        markedForDeletionId = bookmarkId;
+        console.log('Marked for deletion:', bookmarkId);
       }
+      event.stopPropagation(); // Prevent global click listener from immediately unmarking
     }
   }
   
   // Renamed and expanded function (Modified)
-  function addListEventListeners() {
-    const lists = [websitesList, youtubeVideosList, youtubeChannelsList, selectionsList]; // Updated lists
-    lists.forEach(list => {
-      // Delete listener (event delegation)
-      // Remove first to prevent duplicates if this function is ever called multiple times on the same list
+  function addListEventListenersForList(list) { // Takes a specific list element
+      if (!list) return;
+      // Remove existing listeners to prevent duplication if called multiple times
       list.removeEventListener('click', handleDeleteBookmark); 
+      list.removeEventListener('click', handleRestoreBookmark);
+      // Add new listeners
       list.addEventListener('click', handleDeleteBookmark);
+      list.addEventListener('click', handleRestoreBookmark);
 
-      // D&D Listeners
-      // Remove first to prevent duplicates
+      // D&D Listeners (existing code)
       list.removeEventListener('dragstart', handleDragStart);
       list.removeEventListener('dragover', handleDragOver);
       list.removeEventListener('dragleave', handleDragLeave);
@@ -313,8 +432,8 @@ document.addEventListener('DOMContentLoaded', function() {
       list.addEventListener('dragleave', handleDragLeave);
       list.addEventListener('drop', handleDrop);
       list.addEventListener('dragend', handleDragEnd);
-    });
   }
+  // Removed the old loop from addListEventListeners as it's now per list.
 
   // Drag and Drop Toggle Functionality (Added)
   dragDropToggle.addEventListener('change', function() {
@@ -333,19 +452,68 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initial load
   loadAndRenderBookmarks();
 
+function handleRestoreBookmark(event) {
+  if (event.target.classList.contains('restoreBtn')) {
+    const bookmarkId = event.target.getAttribute('data-id');
+    console.log('Restoring bookmarkId:', bookmarkId);
+
+    chrome.storage.local.get({ bookmarks: [] }, function(data) {
+      let bookmarks = data.bookmarks;
+      const bookmarkIndex = bookmarks.findIndex(bm => bm.id === bookmarkId);
+
+      if (bookmarkIndex !== -1) {
+        // Remove status and deleted_timestamp to restore
+        delete bookmarks[bookmarkIndex].status;
+        delete bookmarks[bookmarkIndex].deleted_timestamp;
+
+        chrome.storage.local.set({ bookmarks: bookmarks }, function() {
+          if (chrome.runtime.lastError) {
+            console.error("Error restoring bookmark:", chrome.runtime.lastError);
+          } else {
+            console.log("Bookmark restored:", bookmarkId);
+            // View will refresh due to storage.onChanged
+          }
+        });
+      } else {
+        console.warn("Could not find bookmark to restore with ID:", bookmarkId);
+      }
+    });
+  }
+}
+
+  sidebarNav.addEventListener('click', function(e) {
+    e.preventDefault();
+    const targetLink = e.target.closest('.sidebar-link');
+    if (targetLink && targetLink.dataset.section) {
+      showSection(targetLink.dataset.section);
+    }
+  });
+
   chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'local' && changes.bookmarks) {
-      console.log('Bookmarks changed in storage, reloading options page list.');
-      // The renderBookmarks function is called, which will reapply D&D attributes
-      loadAndRenderBookmarks();
+      console.log('Bookmarks changed in storage, reloading current section view.');
+      const currentActiveLink = sidebarNav.querySelector('.sidebar-link.active-section');
+      const currentSection = currentActiveLink ? currentActiveLink.dataset.section : 'youtube_videos';
+      showSection(currentSection); // Re-render the currently active section
     }
-    // If only D&D setting changes, no need to reload all bookmarks,
-    // but updateDraggableState has already handled it.
   });
 
   const exportBtn = document.getElementById('exportBtn');
   const importFile = document.getElementById('importFile');
   const importStatus = document.getElementById('importStatus');
+
+  document.addEventListener('click', function(event) {
+    if (markedForDeletionId !== null && !event.target.closest('.deleteBtn')) {
+      // If an item is marked, and the click was not on any delete button
+      // (handleDeleteBookmark would have handled it and stopped propagation if it was on a delete button)
+      const markedElement = document.querySelector(`.bookmark-item[data-id="${markedForDeletionId}"]`);
+      if (markedElement) {
+        markedElement.classList.remove('marked-for-deletion');
+        console.log('Unmarked due to click away from delete buttons:', markedForDeletionId);
+      }
+      markedForDeletionId = null;
+    }
+  });
 
   exportBtn.addEventListener('click', function() {
     chrome.storage.local.get({ bookmarks: [] }, function(data) {

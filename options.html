@@ -34,12 +34,15 @@
       --theme-link-color: #88ccff; /* Lighter blue for links */
     }
     
-    body {
+    body { /* Modify existing */
       font-family: sans-serif;
-      margin: 0; /* Remove default margin */
-      background-color: var(--theme-bg-primary);
-      color: var(--theme-text-primary);
+      margin: 0;
+      background-color: var(--theme-bg-primary); /* Uses existing theme variable */
+      color: var(--theme-text-primary); /* Uses existing theme variable */
       transition: background-color 0.3s, color 0.3s;
+      display: flex; /* NEW */
+      height: 100vh; /* NEW */
+      /* overflow: hidden; Optional: if sidebar fixed and content scrolls */
     }
     .container { /* Main content wrapper */
       padding: 20px;
@@ -262,13 +265,100 @@
         min-width: 200px; /* Give select some width */
     }
 
+       .sidebar {
+         width: 240px; /* Adjusted width */
+         min-width: 200px; /* Prevent from getting too small */
+         background-color: #22272b; /* Dark sidebar, distinct from popup's dark theme */
+         padding-top: 20px; /* Space at the top */
+         height: 100vh; /* Full viewport height */
+         display: flex;
+         flex-direction: column;
+         box-shadow: 2px 0 5px rgba(0,0,0,0.25);
+         color: #cdd5de; /* Light text for sidebar */
+         overflow-y: auto; /* Allow sidebar to scroll if many items */
+       }
+       .sidebar-header {
+         padding: 0 20px 15px 20px;
+         border-bottom: 1px solid #3a4045;
+         margin-bottom: 10px;
+       }
+       .sidebar-header h2 {
+         margin: 0;
+         font-size: 1.3em;
+         color: #ffffff;
+       }
+       .sidebar nav ul {
+         list-style-type: none;
+         padding: 0;
+         margin: 0;
+       }
+       .sidebar nav ul li .sidebar-link { /* Target class on <a> */
+         display: block;
+         padding: 13px 20px;
+         color: #cdd5de;
+         text-decoration: none;
+         font-size: 0.95em; /* Adjusted font size */
+         border-left: 4px solid transparent;
+         transition: background-color 0.2s ease, border-left-color 0.2s ease, color 0.2s ease;
+       }
+       .sidebar nav ul li .sidebar-link:hover {
+         background-color: #31363b;
+         color: #ffffff;
+       }
+       .sidebar nav ul li .sidebar-link.active-section {
+         background-color: #1a639c; /* Using a theme-consistent blue from dark mode variables */
+         /* Or use a Netflix-red: background-color: #B9090B; */
+         border-left-color: var(--theme-accent-primary); /* Use theme accent for active border */
+         /* border-left-color: #E50914; */
+         color: #ffffff;
+         font-weight: 500; /* Slightly bolder */
+       }
+       .main-content {
+         flex-grow: 1;
+         /* padding: 20px; The .container inside will handle this */
+         overflow-y: auto;
+         height: 100vh; /* Full viewport height */
+       }
+       .main-content .container { /* Ensure container takes full height of scrollable area */
+           min-height: calc(100% - 40px); /* Account for padding */
+       }
+       .bookmark-list.section-list, .section-title[data-section-content] {
+         display: none; /* Hide all sections by default */
+       }
+       .bookmark-list.section-list.active, .section-title[data-section-content].active {
+         display: block; /* Show active section (ul) */
+       }
+       .section-title[data-section-content].active {
+           display: block; /* Show active section title (h2) */
+       }
+       .bookmark-item.marked-for-deletion {
+         background-color: var(--theme-accent-secondary) !important; /* Or a specific noticeable color like #553333 */
+         /* Add a slight border or outline if desired for more emphasis */
+         outline: 2px solid var(--theme-accent-primary);
+         outline-offset: -2px;
+       }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>My Bookmarks</h1>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Sections</h2> <!-- Optional header for the sidebar -->
+    </div>
+    <nav id="sidebarNav">
+      <ul>
+        <li><a href="#" data-section="youtube_videos" class="sidebar-link active-section">YouTube Videos</a></li>
+        <li><a href="#" data-section="youtube_channels" class="sidebar-link">YouTube Channels</a></li>
+        <li><a href="#" data-section="websites" class="sidebar-link">Websites</a></li>
+        <li><a href="#" data-section="webpages" class="sidebar-link">Webpages</a></li>
+        <li><a href="#" data-section="recycle_bin" class="sidebar-link">Recycle Bin</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="main-content">
+    <div class="container">
+      <h1>My Bookmarks</h1>
 
-    <div class="settings-section">
+      <div class="settings-section">
       <h2>Settings</h2>
       <div class="controls">
         <button id="exportBtn">Export Bookmarks</button>
@@ -291,26 +381,32 @@
       </div>
     </div>
 
-    <h2 class="section-title">Websites & Pages</h2>
-    <ul id="websitesList" class="bookmark-list">
-      <li class="bookmark-item">Placeholder for a website bookmark.</li>
+    <h2 class="section-title" data-section-content="websites">Websites</h2>
+    <ul id="websitesList" class="bookmark-list section-list" data-section-content="websites">
+      <!-- Websites will be dynamically inserted here -->
     </ul>
 
-    <h2 class="section-title">YouTube Videos</h2>
-    <ul id="youtubeVideosList" class="bookmark-list">
+    <h2 class="section-title" data-section-content="webpages">Webpages</h2>
+    <ul id="webpagesList" class="bookmark-list section-list" data-section-content="webpages">
+      <!-- Webpages will be dynamically inserted here -->
+    </ul>
+
+    <h2 class="section-title" data-section-content="youtube_videos">YouTube Videos</h2>
+    <ul id="youtubeVideosList" class="bookmark-list section-list" data-section-content="youtube_videos">
       <!-- YouTube Videos will be dynamically inserted here -->
     </ul>
 
-    <h2 class="section-title">YouTube Channels</h2>
-    <ul id="youtubeChannelsList" class="bookmark-list">
+    <h2 class="section-title" data-section-content="youtube_channels">YouTube Channels</h2>
+    <ul id="youtubeChannelsList" class="bookmark-list section-list" data-section-content="youtube_channels">
       <!-- YouTube Channels will be dynamically inserted here -->
     </ul>
-    
-    <h2 class="section-title">Selections & Notes</h2>
-    <ul id="selectionsList" class="bookmark-list">
-      <li class="bookmark-item">Placeholder for a text selection.</li>
+
+    <h2 class="section-title" data-section-content="recycle_bin">Recycle Bin</h2>
+    <ul id="recycleBinList" class="bookmark-list section-list" data-section-content="recycle_bin">
+      <!-- Recycle Bin items will be dynamically inserted here -->
     </ul>
 
+  </div>
   </div>
   <script src="options.js"></script>
 </body>

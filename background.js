@@ -1,5 +1,20 @@
+const RECYCLE_BIN_CLEANUP_ALARM_NAME = 'recycleBinDailyCleanup';
+
 // Listener for when the extension is installed or updated
-chrome.runtime.onInstalled.addListener(function() {
+chrome.runtime.onInstalled.addListener(function(details) { // Added details parameter
+  // Create the daily alarm for recycle bin cleanup
+  chrome.alarms.get(RECYCLE_BIN_CLEANUP_ALARM_NAME, (alarm) => {
+    if (alarm) {
+      console.log('Recycle bin cleanup alarm already exists:', alarm);
+    } else {
+      chrome.alarms.create(RECYCLE_BIN_CLEANUP_ALARM_NAME, {
+        delayInMinutes: 5, // Start 5 minutes after install/update/browser start with new alarm logic
+        periodInMinutes: 1440 // 24 hours
+      });
+      console.log('Recycle bin cleanup alarm created.');
+    }
+  });
+
   // Remove any existing context menus to avoid duplicates, then recreate
   chrome.contextMenus.removeAll(function() {
     if (chrome.runtime.lastError) {
@@ -61,6 +76,56 @@ chrome.runtime.onInstalled.addListener(function() {
         console.log("All context menus created successfully.");
     }
   });
+  // Add cleanupRecycleBin call to existing onInstalled
+  // This part of the original onInstalled listener is preserved
+  if (details.reason === 'install' || details.reason === 'update') {
+    console.log("Extension installed/updated: Running recycle bin cleanup immediately.");
+    cleanupRecycleBin();
+  }
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === RECYCLE_BIN_CLEANUP_ALARM_NAME) {
+    console.log("Daily alarm triggered: Running recycle bin cleanup.");
+    cleanupRecycleBin();
+  }
+});
+
+function cleanupRecycleBin() {
+  chrome.storage.local.get({ bookmarks: [] }, function(data) {
+    let bookmarks = data.bookmarks;
+    const sevenDaysAgo = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+    let changed = false;
+
+    const keptBookmarks = bookmarks.filter(bm => {
+      if (bm.status === 'deleted') {
+        const deletedTime = new Date(bm.deleted_timestamp).getTime();
+        if (deletedTime < sevenDaysAgo) {
+          console.log('Permanently deleting bookmark from recycle bin (older than 7 days):', bm.title, bm.id);
+          changed = true;
+          return false; // Filter out - i.e., delete
+        }
+      }
+      return true; // Keep
+    });
+
+    if (changed) {
+      chrome.storage.local.set({ bookmarks: keptBookmarks }, function() {
+        if (chrome.runtime.lastError) {
+          console.error("Error during recycle bin cleanup:", chrome.runtime.lastError);
+        } else {
+          console.log("Recycle bin cleanup complete. Kept bookmarks:", keptBookmarks.length);
+        }
+      });
+    } else {
+      console.log("Recycle bin cleanup: No old items to delete permanently.");
+    }
+  });
+}
+
+chrome.runtime.onStartup.addListener(() => {
+  console.log("Browser startup: Running recycle bin cleanup.");
+  cleanupRecycleBin();
 });
 
 function saveBookmarkToStorage(bookmarkData) {
