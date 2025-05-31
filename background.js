@@ -99,6 +99,10 @@ function cleanupRecycleBin() {
 
     const keptBookmarks = bookmarks.filter(bm => {
       if (bm.status === 'deleted') {
+        if (!bm.deleted_timestamp) { // Handle items that might be 'deleted' but lack a timestamp
+            console.warn('Found deleted item without timestamp, keeping for now:', bm.id);
+            return true;
+        }
         const deletedTime = new Date(bm.deleted_timestamp).getTime();
         if (deletedTime < sevenDaysAgo) {
           console.log('Permanently deleting bookmark from recycle bin (older than 7 days):', bm.title, bm.id);
@@ -114,7 +118,7 @@ function cleanupRecycleBin() {
         if (chrome.runtime.lastError) {
           console.error("Error during recycle bin cleanup:", chrome.runtime.lastError);
         } else {
-          console.log("Recycle bin cleanup complete. Kept bookmarks:", keptBookmarks.length);
+          console.log("Recycle bin cleanup complete. Total bookmarks now:", keptBookmarks.length);
         }
       });
     } else {

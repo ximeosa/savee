@@ -25,15 +25,15 @@
       margin: 0;
     }
     .bookmark-options button {
-      display: inline-block; /* Or remove if flex handles it - flex will handle it */
-      width: 48%;
-      padding: 10px 5px;
-      margin-bottom: 0;
+      display: block; /* Fine for flex children */
+      width: 48%; /* Changed */
+      padding: 10px 5px; /* Changed */
+      margin-bottom: 0; /* Changed */
       border: 1px solid #555555; /* Subtle border for buttons */
       border-radius: 6px; /* Slightly less rounded, more modern rect */
       background-color: #333333; /* Medium dark grey for buttons */
       color: #E0E0E0; /* Light grey button text */
-      font-size: 13px;
+      font-size: 13px; /* Changed */
       font-weight: 500;
       cursor: pointer;
       transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;

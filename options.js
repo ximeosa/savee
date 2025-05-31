@@ -502,6 +502,19 @@ function handleRestoreBookmark(event) {
   const importFile = document.getElementById('importFile');
   const importStatus = document.getElementById('importStatus');
 
+  const sidebarElement = document.querySelector('.sidebar');
+  if (sidebarElement) {
+    sidebarElement.addEventListener('mouseenter', function() {
+      this.classList.add('sidebar-expanded');
+    });
+
+    sidebarElement.addEventListener('mouseleave', function() {
+      this.classList.remove('sidebar-expanded');
+    });
+  } else {
+    console.error("Sidebar element not found for hover events.");
+  }
+
   document.addEventListener('click', function(event) {
     if (markedForDeletionId !== null && !event.target.closest('.deleteBtn')) {
       // If an item is marked, and the click was not on any delete button

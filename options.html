@@ -4,34 +4,35 @@
   <title>Advanced Bookmarker - Options</title>
   <style>
     :root {
-      /* Default theme (Light Pastel) */
-      --theme-bg-primary: #f0f8ff; /* Light pastel background - AliceBlue */
-      --theme-bg-secondary: #ffffff; /* Card backgrounds, controls */
-      --theme-text-primary: #333333; /* Main text */
-      --theme-text-secondary: #555555; /* Subdued text */
-      --theme-accent-primary: #98fb98; /* Pastel green for accents */
-      --theme-accent-secondary: #dda0dd; /* Pastel purple for other accents */
-      --theme-border-color: #d3d3d3; /* Light grey border */
-      --theme-shadow-color: rgba(0,0,0,0.1);
-      --theme-button-bg: #e9ecef;
-      --theme-button-text: #495057;
-      --theme-button-hover-bg: #dee2e6;
-      --theme-link-color: #663399; /* Rebeccapurple as a pastel-ish link */
+      /* Updated Light Pastel Theme */
+      --theme-bg-primary: #fdf6f0;
+      --theme-bg-secondary: #ffffff;
+      --theme-text-primary: #2c3e50;
+      --theme-text-secondary: #7f8c8d;
+      --theme-accent-primary: #1abc9c; /* Turquoise/Teal */
+      --theme-accent-secondary: #ff7f50; /* Coral */
+      --theme-border-color: #e0e0e0;
+      --theme-shadow-color: rgba(44, 62, 80, 0.15); /* Shadow color based on new text color */
+      --theme-button-bg: #1abc9c;
+      --theme-button-text: #ffffff;
+      --theme-button-hover-bg: #16a085;
+      --theme-link-color: #e74c3c; /* Soft red/coral */
     }
 
     body[data-theme="dark_mode"] {
-      --theme-bg-primary: #0a192f;    /* Dark blue/black background */
-      --theme-bg-secondary: #172a45;  /* Card backgrounds - slightly lighter dark blue */
-      --theme-text-primary: #e6f1ff;  /* Light text for readability */
-      --theme-text-secondary: #a8b2d1;/* Subdued light text */
-      --theme-accent-primary: #00a8ff; /* Bright blue for accents */
-      --theme-accent-secondary: #304ffe;/* Another blue for other accents */
-      --theme-border-color: #303f5a;  /* Darker border */
-      --theme-shadow-color: rgba(0,0,0,0.3); /* Darker shadow */
-      --theme-button-bg: #233554;
-      --theme-button-text: #e6f1ff;
-      --theme-button-hover-bg: #304a6d;
-      --theme-link-color: #88ccff; /* Lighter blue for links */
+      /* Updated Dark Blue (Dark Mode) Theme */
+      --theme-bg-primary: #0d1117;
+      --theme-bg-secondary: #161b22;
+      --theme-text-primary: #c9d1d9;
+      --theme-text-secondary: #8b949e;
+      --theme-accent-primary: #58a6ff; /* GitHub-like blue */
+      --theme-accent-secondary: #f778ba; /* Bright Pink/Magenta */
+      --theme-border-color: #30363d;
+      --theme-shadow-color: rgba(0,0,0,0.4); /* Slightly stronger shadow for dark mode */
+      --theme-button-bg: #21262d; /* Dark grey button */
+      --theme-button-text: #c9d1d9;
+      --theme-button-hover-bg: #30363d; /* Slightly lighter grey on hover */
+      --theme-link-color: #58a6ff; /* Match primary accent blue */
     }
     
     body { /* Modify existing */
@@ -40,9 +41,9 @@
       background-color: var(--theme-bg-primary); /* Uses existing theme variable */
       color: var(--theme-text-primary); /* Uses existing theme variable */
       transition: background-color 0.3s, color 0.3s;
-      display: flex; /* NEW */
-      height: 100vh; /* NEW */
-      /* overflow: hidden; Optional: if sidebar fixed and content scrolls */
+      /* display: flex; /* REMOVED for fixed sidebar */
+      height: 100vh;
+      /* overflow: hidden; /* Optional: if sidebar fixed and content scrolls */
     }
     .container { /* Main content wrapper */
       padding: 20px;
@@ -62,6 +63,10 @@
       margin-top: 30px; /* Kept from original */
       margin-bottom: 10px; /* Kept from original */
       padding-bottom: 5px; /* Kept from original */
+    }
+    /* Adjust .settings-section h2 to remove top margin if it looks off in panel */
+    .settings-section h2 {
+        margin-top: 0;
     }
 
     .bookmark-list {
@@ -197,12 +202,23 @@
     }
     
     /* Controls, Settings, Theme Selector */
-    .settings-section { /* Wrapper for all settings */
-        background-color: var(--theme-bg-secondary);
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 30px;
-        box-shadow: 0 2px 4px var(--theme-shadow-color);
+    /* Make .settings-section a panel */
+    .settings-section {
+      /* Existing styles: background-color, padding, border-radius, box-shadow should be kept */
+      background-color: var(--theme-bg-secondary);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px var(--theme-shadow-color);
+      position: fixed; /* Position relative to viewport */
+      top: 60px; /* Adjust as needed, below potential header/toggle */
+      right: 20px;
+      width: 300px; /* Or desired width for the panel */
+      z-index: 1001; /* Above sidebar and other content */
+      display: none; /* Hidden by default */
+      /* margin-bottom: 30px; /* No longer needed if fixed */
+    }
+    .settings-section.visible {
+      display: block;
     }
     .controls { /* Specific to import/export/dnd toggle row */
       display: flex;
@@ -265,60 +281,97 @@
         min-width: 200px; /* Give select some width */
     }
 
-       .sidebar {
-         width: 240px; /* Adjusted width */
-         min-width: 200px; /* Prevent from getting too small */
-         background-color: #22272b; /* Dark sidebar, distinct from popup's dark theme */
-         padding-top: 20px; /* Space at the top */
-         height: 100vh; /* Full viewport height */
-         display: flex;
-         flex-direction: column;
-         box-shadow: 2px 0 5px rgba(0,0,0,0.25);
-         color: #cdd5de; /* Light text for sidebar */
-         overflow-y: auto; /* Allow sidebar to scroll if many items */
-       }
+      .sidebar {
+        width: 60px; /* Collapsed width */
+        min-width: 60px; /* Prevent from getting smaller */
+        background-color: #22272b;
+        padding-top: 20px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.25); /* Keep shadow */
+        color: #cdd5de;
+        overflow-x: hidden; /* Hide text that overflows when collapsed */
+        overflow-y: auto;
+        position: fixed; /* Fixed position to slide over or push content */
+        left: 0;
+        top: 0;
+        z-index: 1000; /* Ensure it's above other content if overlapping */
+        transition: width 0.3s ease; /* Smooth transition for width */
+      }
+
+      .sidebar.sidebar-expanded {
+        width: 240px; /* Expanded width */
+      }
        .sidebar-header {
          padding: 0 20px 15px 20px;
          border-bottom: 1px solid #3a4045;
          margin-bottom: 10px;
+         display: flex; /* To center icon if header text is hidden */
+         align-items: center;
+         justify-content: center; /* If you add an icon here */
        }
        .sidebar-header h2 {
          margin: 0;
          font-size: 1.3em;
          color: #ffffff;
+         opacity: 0; /* Initially hidden text */
+         transition: opacity 0.3s ease;
+         white-space: nowrap;
        }
+      .sidebar.sidebar-expanded .sidebar-header h2 {
+          opacity: 1; /* Visible when expanded */
+      }
        .sidebar nav ul {
          list-style-type: none;
          padding: 0;
          margin: 0;
        }
-       .sidebar nav ul li .sidebar-link { /* Target class on <a> */
-         display: block;
+       .sidebar nav ul li .sidebar-link {
+         display: flex; /* Use flex for icon + text alignment */
+         align-items: center; /* Vertically align icon and text */
          padding: 13px 20px;
          color: #cdd5de;
          text-decoration: none;
-         font-size: 0.95em; /* Adjusted font size */
+         font-size: 0.95em;
          border-left: 4px solid transparent;
          transition: background-color 0.2s ease, border-left-color 0.2s ease, color 0.2s ease;
+         white-space: nowrap; /* Prevent text from wrapping */
+         overflow: hidden; /* Hide text when sidebar is collapsed */
        }
+      /* Icon placeholder - real icons would be better */
+      .sidebar nav ul li .sidebar-link::before {
+        content: '●'; /* Placeholder for an icon */
+        min-width: 20px; /* Space for the icon */
+        margin-right: 0px; /* Initially no margin for text */
+        display: inline-block;
+        text-align: center;
+        transition: margin-right 0.3s ease;
+      }
+      .sidebar.sidebar-expanded nav ul li .sidebar-link::before {
+        margin-right: 10px; /* Add margin when expanded to space icon from text */
+      }
        .sidebar nav ul li .sidebar-link:hover {
          background-color: #31363b;
          color: #ffffff;
        }
        .sidebar nav ul li .sidebar-link.active-section {
-         background-color: #1a639c; /* Using a theme-consistent blue from dark mode variables */
-         /* Or use a Netflix-red: background-color: #B9090B; */
-         border-left-color: var(--theme-accent-primary); /* Use theme accent for active border */
-         /* border-left-color: #E50914; */
+         background-color: #1a639c;
+         border-left-color: var(--theme-accent-primary);
          color: #ffffff;
-         font-weight: 500; /* Slightly bolder */
+         font-weight: 500;
        }
-       .main-content {
-         flex-grow: 1;
-         /* padding: 20px; The .container inside will handle this */
-         overflow-y: auto;
-         height: 100vh; /* Full viewport height */
-       }
+      .main-content {
+        flex-grow: 1;
+        overflow-y: auto;
+        height: 100vh;
+        margin-left: 60px; /* Initial margin for collapsed sidebar */
+        transition: margin-left 0.3s ease; /* Smooth transition for margin */
+        /* padding: 20px; This should be on .container inside main-content */
+      }
+      .sidebar.sidebar-expanded + .main-content { /* Adjust when sidebar is expanded */
+        margin-left: 240px;
+      }
        .main-content .container { /* Ensure container takes full height of scrollable area */
            min-height: calc(100% - 40px); /* Account for padding */
        }
@@ -326,7 +379,11 @@
          display: none; /* Hide all sections by default */
        }
        .bookmark-list.section-list.active, .section-title[data-section-content].active {
-         display: block; /* Show active section (ul) */
+         display: block; /* Show active section (ul) -- section-title remains block */
+       }
+       .bookmark-list.section-list[data-section-content].active {
+         /* If using grid, set display: grid, otherwise block is fine */
+         display: grid; /* Assuming .bookmark-list uses grid */
        }
        .section-title[data-section-content].active {
            display: block; /* Show active section title (h2) */
@@ -337,6 +394,119 @@
          outline: 2px solid var(--theme-accent-primary);
          outline-offset: -2px;
        }
+      .main-header-actions {
+        display: flex;
+        justify-content: flex-end; /* Position button to the right */
+        padding: 10px 20px 0; /* Padding within main-content, above container */
+        position: sticky; /* Keep it visible while scrolling main content */
+        top: 0;
+        background: var(--theme-bg-primary); /* Match main content bg */
+        z-index: 950; /* Below sidebar but above normal content */
+      }
+      #settingsToggleBtn {
+        background-color: var(--theme-button-bg);
+        color: var(--theme-button-text);
+        border: 1px solid var(--theme-border-color);
+        padding: 8px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: background-color 0.2s ease;
+      }
+      #settingsToggleBtn:hover {
+        background-color: var(--theme-button-hover-bg);
+      }
+      .settings-section .controls button,
+      .settings-section .controls #importFileLabel {
+        padding: 12px 15px; /* Netflix style */
+        background-color: #333333; /* Netflix style */
+        color: #E0E0E0; /* Netflix style */
+        border: 1px solid #555555; /* Netflix style */
+        border-radius: 6px; /* Netflix style */
+        font-size: 14px; /* Netflix style */
+        text-align: center;
+        display: inline-block;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+        margin-right: 10px; /* Space between these buttons */
+        margin-bottom: 10px; /* Space if they wrap */
+      }
+      .settings-section .controls button:hover,
+      .settings-section .controls #importFileLabel:hover {
+        background-color: #454545; /* Netflix style hover */
+        border-color: #777777; /* Netflix style hover */
+      }
+      .settings-section .controls input[type="file"]#importFile {
+        display: none;
+      }
+
+      /* Theme Selector Restyling */
+      .settings-section .theme-selector select {
+        background-color: #333333; /* Dark theme input background */
+        color: #E0E0E0; /* Light text */
+        border: 1px solid #555555;
+        border-radius: 6px; /* Consistent border-radius */
+        padding: 10px 12px; /* Adjust padding for aesthetics */
+        font-size: 0.9em; /* Consistent font size */
+        min-width: 220px; /* Ensure it has enough width */
+        -webkit-appearance: none; /* Remove default Safari/Chrome arrow */
+        -moz-appearance: none;    /* Remove default Firefox arrow */
+        appearance: none;         /* Remove default arrow for other browsers */
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207.5L10%2012.5L15%207.5%22%20stroke%3D%22%23E0E0E0%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E');
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px; /* Adjust size of arrow */
+      }
+      .settings-section .theme-selector select:hover {
+        background-color: #454545; /* Consistent hover */
+        border-color: #777777;
+      }
+      .settings-section .theme-selector label { /* Ensure label is styled for dark theme */
+        color: var(--theme-text-primary);
+        margin-right: 8px;
+      }
+
+      /* D&D Toggle Restyling */
+      .settings-section .setting-toggle .hidden-checkbox {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .settings-section .setting-toggle .custom-toggle-label {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        user-select: none;
+        color: var(--theme-text-primary);
+      }
+      .custom-toggle-switch-track {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        background-color: #555; /* Off state */
+        border-radius: 12px;
+        transition: background-color 0.2s ease;
+        margin-left: 10px;
+      }
+      .custom-toggle-switch-thumb {
+        position: absolute;
+        content: '';
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: white;
+        top: 3px;
+        left: 3px;
+        transition: transform 0.2s ease;
+      }
+      .settings-section .setting-toggle .hidden-checkbox:checked + .custom-toggle-switch-track {
+        background-color: var(--theme-accent-primary); /* On state, e.g., #00a8ff */
+      }
+      .settings-section .setting-toggle .hidden-checkbox:checked + .custom-toggle-switch-track .custom-toggle-switch-thumb {
+        transform: translateX(20px);
+      }
   </style>
 </head>
 <body>
@@ -355,6 +525,9 @@
     </nav>
   </div>
   <div class="main-content">
+    <div class="main-header-actions">
+      <button id="settingsToggleBtn" title="Settings">Settings</button>
+    </div>
     <div class="container">
       <h1>My Bookmarks</h1>
 
@@ -367,8 +540,13 @@
         <span id="importStatus"></span>
         
         <div class="setting-toggle">
-          <label for="dragDropToggle">Enable Drag & Drop Reordering:</label>
-          <input type="checkbox" id="dragDropToggle">
+          <label for="dragDropToggle" class="custom-toggle-label"> <!-- Add class to label -->
+            Enable Drag & Drop Reordering:
+            <input type="checkbox" id="dragDropToggle" class="hidden-checkbox"> <!-- Hide actual checkbox -->
+            <span class="custom-toggle-switch-track"> <!-- The track -->
+              <span class="custom-toggle-switch-thumb"></span> <!-- The thumb -->
+            </span>
+          </label>
         </div>
       </div>
       <div class="theme-selector">
